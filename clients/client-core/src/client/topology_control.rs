@@ -10,6 +10,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time;
 use std::time::Duration;
+use task::ShutdownListener;
 use tokio::sync::{RwLock, RwLockReadGuard};
 use tokio::task::JoinHandle;
 use topology::{nym_topology_from_bonds, NymTopology};
@@ -309,6 +310,22 @@ impl TopologyRefresher {
                 tokio::time::sleep(self.refresh_rate).await;
                 self.refresh().await;
             }
+        })
+    }
+
+    pub fn start_with_shutdown(mut self, mut shutdown: ShutdownListener) -> JoinHandle<()> {
+        tokio::spawn(async move {
+            while !shutdown.is_shutdown() {
+                tokio::select! {
+                    _ = tokio::time::sleep(self.refresh_rate) => {
+                        self.refresh().await;
+                    },
+                    _ = shutdown.recv() => {
+                        log::trace!("Shutdown received while sleeping");
+                    },
+                }
+            }
+            log::info!("Topology Control: Exiting");
         })
     }
 }

@@ -3462,6 +3462,7 @@ dependencies = [
  "serde",
  "snafu",
  "socks5-requests",
+ "task",
  "tokio",
  "topology",
  "url",
@@ -5624,6 +5625,15 @@ dependencies = [
  "filetime",
  "libc",
  "xattr",
+]
+
+[[package]]
+name = "task"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "tokio",
+ "tokio-util 0.7.3",
 ]
 
 [[package]]

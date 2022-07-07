@@ -15,6 +15,7 @@ use nymsphinx::params::{ReplySurbEncryptionAlgorithm, ReplySurbKeyDigestAlgorith
 use nymsphinx::receiver::{MessageReceiver, MessageRecoveryError, ReconstructedMessage};
 use std::collections::HashSet;
 use std::sync::Arc;
+use task::ShutdownListener;
 use tokio::task::JoinHandle;
 
 // Buffer Requests to say "hey, send any reconstructed messages to this channel"
@@ -309,20 +310,24 @@ impl RequestReceiver {
 struct FragmentedMessageReceiver {
     received_buffer: ReceivedMessagesBuffer,
     mixnet_packet_receiver: MixnetMessageReceiver,
+    shutdown: ShutdownListener,
 }
 
 impl FragmentedMessageReceiver {
     fn new(
         received_buffer: ReceivedMessagesBuffer,
         mixnet_packet_receiver: MixnetMessageReceiver,
+        shutdown: ShutdownListener,
     ) -> Self {
         FragmentedMessageReceiver {
             received_buffer,
             mixnet_packet_receiver,
+            shutdown,
         }
     }
     fn start(mut self) -> JoinHandle<()> {
         tokio::spawn(async move {
+            // WIP(JON)
             while let Some(new_messages) = self.mixnet_packet_receiver.next().await {
                 self.received_buffer.handle_new_received(new_messages).await;
             }
@@ -341,6 +346,7 @@ impl ReceivedMessagesBufferController {
         query_receiver: ReceivedBufferRequestReceiver,
         mixnet_packet_receiver: MixnetMessageReceiver,
         reply_key_storage: ReplyKeyStorage,
+        shutdown: ShutdownListener,
     ) -> Self {
         let received_buffer =
             ReceivedMessagesBuffer::new(local_encryption_keypair, reply_key_storage);
@@ -349,8 +355,9 @@ impl ReceivedMessagesBufferController {
             fragmented_message_receiver: FragmentedMessageReceiver::new(
                 received_buffer.clone(),
                 mixnet_packet_receiver,
+                shutdown.clone(),
             ),
-            request_receiver: RequestReceiver::new(received_buffer, query_receiver),
+            request_receiver: RequestReceiver::new(received_buffer, query_receiver, shutdown),
         }
     }
 
