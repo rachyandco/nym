@@ -62,15 +62,7 @@ impl From<InitialRewardingParams> for RewardingParams {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    BondMixnode {
-        mix_node: MixNode,
-        cost_params: MixNodeCostParams,
-        owner_signature: String,
-    },
-    UnbondMixnode {},
-    UnbondMixnodeOnBehalf {
-        owner: String,
-    },
+    // state/sys-params-related
     UpdateRewardingValidatorAddress {
         address: String,
     },
@@ -83,6 +75,23 @@ pub enum ExecuteMsg {
     },
     ReconcileEpochEvents {
         limit: Option<usize>,
+    },
+
+    // mixnode-related:
+    BondMixnode {
+        mix_node: MixNode,
+        cost_params: MixNodeCostParams,
+        owner_signature: String,
+    },
+    BondMixnodeOnBehalf {
+        mix_node: MixNode,
+        cost_params: MixNodeCostParams,
+        owner_signature: String,
+        owner: String,
+    },
+    UnbondMixnode {},
+    UnbondMixnodeOnBehalf {
+        owner: String,
     },
     UpdateMixnodeCostParams {
         new_costs: MixNodeCostParams,
@@ -99,37 +108,9 @@ pub enum ExecuteMsg {
         owner: String,
     },
 
-    // to reimplement:
+    // gateway-related:
     BondGateway {
         gateway: Gateway,
-        owner_signature: String,
-    },
-    UnbondGateway {},
-
-    DelegateToMixnode {
-        mix_identity: IdentityKey,
-    },
-    DelegateToMixnodeOnBehalf {
-        mix_identity: IdentityKey,
-        delegate: String,
-    },
-
-    UndelegateFromMixnode {
-        mix_identity: IdentityKey,
-    },
-    UndelegateFromMixnodeOnBehalf {
-        mix_identity: IdentityKey,
-        delegate: String,
-    },
-
-    RewardMixnode {
-        mix_id: NodeId,
-        performance: Performance,
-    },
-
-    BondMixnodeOnBehalf {
-        mix_node: MixNode,
-        owner: String,
         owner_signature: String,
     },
     BondGatewayOnBehalf {
@@ -137,18 +118,41 @@ pub enum ExecuteMsg {
         owner: String,
         owner_signature: String,
     },
+    UnbondGateway {},
     UnbondGatewayOnBehalf {
         owner: String,
     },
-    ClaimOperatorReward {},
-    ClaimOperatorRewardOnBehalf {
+
+    // delegation-related:
+    DelegateToMixnode {
+        mix_id: NodeId,
+    },
+    DelegateToMixnodeOnBehalf {
+        mix_id: NodeId,
+        delegate: String,
+    },
+    UndelegateFromMixnode {
+        mix_id: NodeId,
+    },
+    UndelegateFromMixnodeOnBehalf {
+        mix_id: NodeId,
+        delegate: String,
+    },
+
+    // reward-related
+    RewardMixnode {
+        mix_id: NodeId,
+        performance: Performance,
+    },
+    WithdrawOperatorReward {},
+    WithdrawOperatorRewardOnBehalf {
         owner: String,
     },
-    ClaimDelegatorReward {
-        mix_identity: IdentityKey,
+    WithdrawDelegatorReward {
+        mix_id: NodeId,
     },
-    ClaimDelegatorRewardOnBehalf {
-        mix_identity: IdentityKey,
+    WithdrawDelegatorRewardOnBehalf {
+        mix_id: NodeId,
         owner: String,
     },
 }
@@ -156,6 +160,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    // TODO: COMPLETELY NOT DEALT WITH YET
     GetCurrentOperatorCost {},
     GetRewardingValidatorAddress {},
     GetAllDelegationKeys {},
