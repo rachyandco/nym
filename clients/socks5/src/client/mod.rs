@@ -85,6 +85,7 @@ impl NymClient {
         &self,
         topology_accessor: TopologyAccessor,
         mix_tx: BatchMixMessageSender,
+        shutdown: ShutdownListener,
     ) {
         info!("Starting loop cover traffic stream...");
 
@@ -98,6 +99,7 @@ impl NymClient {
             mix_tx,
             self.as_mix_recipient(),
             topology_accessor,
+            shutdown,
         )
         .start();
     }
@@ -263,6 +265,7 @@ impl NymClient {
         &self,
         buffer_requester: ReceivedBufferRequestSender,
         msg_input: InputMessageSender,
+        shutdown: ShutdownListener,
     ) {
         info!("Starting socks5 listener...");
         let auth_methods = vec![AuthenticationMethods::NoAuth as u8];
@@ -274,6 +277,7 @@ impl NymClient {
             authenticator,
             self.config.get_provider_mix_address(),
             self.as_mix_recipient(),
+            shutdown,
         );
         tokio::spawn(async move { sphinx_socks.serve(msg_input, buffer_requester).await });
     }
@@ -381,8 +385,16 @@ impl NymClient {
             shutdown.subscribe(),
         );
 
-        self.start_cover_traffic_stream(shared_topology_accessor, sphinx_message_sender);
-        self.start_socks5_listener(received_buffer_request_sender, input_sender);
+        self.start_cover_traffic_stream(
+            shared_topology_accessor,
+            sphinx_message_sender,
+            shutdown.subscribe(),
+        );
+        self.start_socks5_listener(
+            received_buffer_request_sender,
+            input_sender,
+            shutdown.subscribe(),
+        );
 
         info!("Client startup finished!");
         info!("The address of this client is: {}", self.as_mix_recipient());

@@ -86,6 +86,7 @@ impl NymClient {
         &self,
         topology_accessor: TopologyAccessor,
         mix_tx: BatchMixMessageSender,
+        shutdown: ShutdownListener,
     ) {
         info!("Starting loop cover traffic stream...");
 
@@ -99,6 +100,7 @@ impl NymClient {
             mix_tx,
             self.as_mix_recipient(),
             topology_accessor,
+            shutdown,
         )
         .start();
     }
@@ -396,7 +398,11 @@ impl NymClient {
             shutdown.subscribe(),
         );
 
-        self.start_cover_traffic_stream(shared_topology_accessor, sphinx_message_sender);
+        self.start_cover_traffic_stream(
+            shared_topology_accessor,
+            sphinx_message_sender,
+            shutdown.subscribe(),
+        );
 
         match self.config.get_socket_type() {
             SocketType::WebSocket => {

@@ -6,6 +6,7 @@ use futures::StreamExt;
 use log::*;
 use ordered_buffer::{OrderedMessage, OrderedMessageBuffer};
 use socks5_requests::ConnectionId;
+use task::ShutdownListener;
 use std::collections::{HashMap, HashSet};
 
 /// A generic message produced after reading from a socket/connection. It includes data that was
@@ -74,10 +75,13 @@ pub struct Controller {
     // buffer for messages received before connection was established due to mixnet being able to
     // un-order messages. Note we don't ever expect to have more than 1-2 messages per connection here
     pending_messages: HashMap<ConnectionId, Vec<(Vec<u8>, bool)>>,
+
+    // Listen to shutdown messages
+    shutdown: ShutdownListener,
 }
 
 impl Controller {
-    pub fn new() -> (Self, ControllerSender) {
+    pub fn new(shutdown: ShutdownListener) -> (Self, ControllerSender) {
         let (sender, receiver) = mpsc::unbounded();
         (
             Controller {
@@ -85,6 +89,7 @@ impl Controller {
                 receiver,
                 recently_closed: HashSet::new(),
                 pending_messages: HashMap::new(),
+                shutdown,
             },
             sender,
         )
@@ -170,16 +175,24 @@ impl Controller {
     }
 
     pub async fn run(&mut self) {
-        while let Some(command) = self.receiver.next().await {
-            match command {
-                ControllerCommand::Send(conn_id, data, is_closed) => {
-                    self.send_to_connection(conn_id, data, is_closed)
+        while !self.shutdown.is_shutdown() {
+            tokio::select! {
+                Some(command) = self.receiver.next() => {
+                    match command {
+                        ControllerCommand::Send(conn_id, data, is_closed) => {
+                            self.send_to_connection(conn_id, data, is_closed)
+                        }
+                        ControllerCommand::Insert(conn_id, sender) => {
+                            self.insert_connection(conn_id, sender)
+                        }
+                        ControllerCommand::Remove(conn_id) => self.remove_connection(conn_id),
+                    }
+                },
+                _ = self.shutdown.recv() => {
+                    log::trace!("Controller (socks5): Received shutdown");
                 }
-                ControllerCommand::Insert(conn_id, sender) => {
-                    self.insert_connection(conn_id, sender)
-                }
-                ControllerCommand::Remove(conn_id) => self.remove_connection(conn_id),
             }
         }
+        log::info!("Controller (socks5): Exiting");
     }
 }

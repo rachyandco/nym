@@ -4096,6 +4096,7 @@ dependencies = [
  "log",
  "ordered-buffer",
  "socks5-requests",
+ "task",
  "tokio",
  "tokio-test",
  "tokio-util 0.7.3",
