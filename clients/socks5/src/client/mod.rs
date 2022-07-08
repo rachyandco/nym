@@ -378,7 +378,7 @@ impl NymClient {
             ack_receiver,
             input_receiver,
             sphinx_message_sender.clone(),
-            subscribe.subscribe(),
+            shutdown.subscribe(),
         );
 
         self.start_cover_traffic_stream(shared_topology_accessor, sphinx_message_sender);

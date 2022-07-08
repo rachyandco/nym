@@ -80,6 +80,7 @@ where
 {
     out_queue_control: Option<OutQueueControl<R>>,
     ack_control: Option<AcknowledgementController<R>>,
+    shutdown: ShutdownListener,
 }
 
 // obviously when we finally make shared rng that is on 'higher' level, this should become
@@ -143,6 +144,7 @@ impl RealMessagesController<OsRng> {
         RealMessagesController {
             out_queue_control: Some(out_queue_control),
             ack_control: Some(ack_control),
+            shutdown,
         }
     }
 
@@ -153,11 +155,13 @@ impl RealMessagesController<OsRng> {
         // the below are log messages are errors as at the current stage we do not expect any of
         // the task to ever finish. This will of course change once we introduce
         // graceful shutdowns.
+        // WIP(JON): shutdown
         let out_queue_control_fut = tokio::spawn(async move {
             out_queue_control.run_out_queue_control().await;
             error!("The out queue controller has finished execution!");
             out_queue_control
         });
+        // WIP(JON): shutdown
         let ack_control_fut = tokio::spawn(async move {
             ack_control.run().await;
             error!("The acknowledgement controller has finished execution!");

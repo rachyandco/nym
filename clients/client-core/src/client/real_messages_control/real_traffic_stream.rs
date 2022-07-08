@@ -19,6 +19,7 @@ use std::collections::VecDeque;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
+use task::ShutdownListener;
 use tokio::time;
 
 /// Configurable parameters of the `OutQueueControl`
@@ -174,6 +175,7 @@ where
         rng: R,
         our_full_destination: Recipient,
         topology_access: TopologyAccessor,
+        shutdown: ShutdownListener,
     ) -> Self {
         OutQueueControl {
             config,
@@ -239,7 +241,10 @@ where
         // - we run out of memory
         // - the receiver channel is closed
         // in either case there's no recovery and we can only panic
-        self.mix_tx.unbounded_send(vec![next_message]).unwrap();
+        if let Err(err) = self.mix_tx.unbounded_send(vec![next_message]) {
+            // TODO: check if the reason for failing is due to shutdown being signalled
+            log::error!("Failed to send: {err}");
+        }
 
         // JS: Not entirely sure why or how it fixes stuff, but without the yield call,
         // the UnboundedReceiver [of mix_rx] will not get a chance to read anything
@@ -257,9 +262,17 @@ where
             self.config.average_message_sending_delay,
         )));
 
-        while let Some(next_message) = self.next().await {
-            self.on_message(next_message).await;
+        while !shutdown.is_shutdown() {
+            tokio::select! {
+                Some(next_message) = self.next() => {
+                    self.on_message(next_message).await;
+                },
+                _ = shutdown.recv() => {
+                    log::trace!("OutQueueControl: Received shutdown");
+                }
+            }
         }
+        log::info!("OutQueueControl: Exiting");
     }
 
     pub(crate) async fn run_out_queue_control(&mut self) {

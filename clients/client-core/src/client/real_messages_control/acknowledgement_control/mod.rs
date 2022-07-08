@@ -21,6 +21,7 @@ use nymsphinx::{
     Delay as SphinxDelay,
 };
 use rand::{CryptoRng, Rng};
+use task::ShutdownListener;
 use std::{
     sync::{Arc, Weak},
     time::Duration,
@@ -219,7 +220,7 @@ where
         }
     }
 
-    pub(super) async fn run(&mut self) {
+    pub(super) async fn run(&mut self, shutdown: ShutdownListener) {
         let mut acknowledgement_listener = self.acknowledgement_listener.take().unwrap();
         let mut input_message_listener = self.input_message_listener.take().unwrap();
         let mut retransmission_request_listener =
