@@ -371,6 +371,20 @@ impl FragmentedMessageReceiver {
                     }
                 }
             }
+            log::info!("FragmentedMessageReceiver: Entering listen state");
+            loop {
+                tokio::select! {
+                    Some(_) = self.mixnet_packet_receiver.next() => {
+                        log::trace!("Ignoring mixnet packet receiver new message");
+                    },
+                    _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                        log::trace!("FragmentedMessageReceiver: Finished waiting");
+                        break;
+                    }
+                }
+            }
+
+
             log::info!("FragmentedMessageReceiver: Exiting");
         })
     }
