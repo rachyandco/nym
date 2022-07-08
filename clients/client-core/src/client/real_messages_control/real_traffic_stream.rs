@@ -84,6 +84,9 @@ where
 
     /// Buffer containing all real messages received. It is first exhausted before more are pulled.
     received_buffer: VecDeque<RealMessage>,
+
+    /// Listens for shutdown signals
+    shutdown: ShutdownListener,
 }
 
 pub(crate) struct RealMessage {
@@ -188,6 +191,7 @@ where
             rng,
             topology_access,
             received_buffer: VecDeque::with_capacity(0), // we won't be putting any data into this guy directly
+            shutdown,
         }
     }
 
@@ -244,6 +248,9 @@ where
         if let Err(err) = self.mix_tx.unbounded_send(vec![next_message]) {
             // TODO: check if the reason for failing is due to shutdown being signalled
             log::error!("Failed to send: {err}");
+            if self.shutdown.is_shutdown_poll() {
+                log::error!(".. and shutdown was detected");
+            }
         }
 
         // JS: Not entirely sure why or how it fixes stuff, but without the yield call,
@@ -255,13 +262,14 @@ where
     }
 
     // Send messages at certain rate and if no real traffic is available, send cover message.
-    async fn run_normal_out_queue(&mut self) {
+    async fn run_normal_out_queue(&mut self) -> bool {
         // we should set initial delay only when we actually start the stream
         self.next_delay = Box::pin(time::sleep(sample_poisson_duration(
             &mut self.rng,
             self.config.average_message_sending_delay,
         )));
 
+        let mut shutdown = self.shutdown.clone();
         while !shutdown.is_shutdown() {
             tokio::select! {
                 Some(next_message) = self.next() => {
@@ -273,9 +281,10 @@ where
             }
         }
         log::info!("OutQueueControl: Exiting");
+        shutdown.is_shutdown()
     }
 
-    pub(crate) async fn run_out_queue_control(&mut self) {
+    pub(crate) async fn run_out_queue_control(&mut self) -> bool {
         debug!("Starting out queue controller...");
         self.run_normal_out_queue().await
     }

@@ -85,8 +85,16 @@ impl ShutdownListener {
     }
 
     pub fn is_shutdown_poll(&mut self) -> bool {
+        if self.shutdown {
+            return true;
+        }
         match self.notify.has_changed() {
-            Ok(has_changed) => has_changed,
+            Ok(has_changed) => {
+                if has_changed {
+                    self.shutdown = true;
+                }
+                has_changed
+            }
             Err(err) => {
                 log::debug!("Polling shutdown failed: {err}");
                 log::debug!("Assuming this means we should shutdown...");

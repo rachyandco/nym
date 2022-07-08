@@ -110,6 +110,7 @@ impl NymClient {
         ack_receiver: AcknowledgementReceiver,
         input_receiver: InputMessageReceiver,
         mix_sender: BatchMixMessageSender,
+        shutdown: ShutdownListener,
     ) {
         let controller_config = real_messages_control::Config::new(
             self.key_manager.ack_key(),
@@ -130,6 +131,7 @@ impl NymClient {
             mix_sender,
             topology_accessor,
             reply_key_storage,
+            shutdown,
         )
         .start();
     }
@@ -391,6 +393,7 @@ impl NymClient {
             ack_receiver,
             input_receiver,
             sphinx_message_sender.clone(),
+            shutdown.subscribe(),
         );
 
         self.start_cover_traffic_stream(shared_topology_accessor, sphinx_message_sender);

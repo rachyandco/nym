@@ -161,6 +161,7 @@ where
         ack_recipient: Recipient,
         reply_key_storage: ReplyKeyStorage,
         connectors: AcknowledgementControllerConnectors,
+        shutdown: ShutdownListener,
     ) -> Self {
         let (retransmission_tx, retransmission_rx) = mpsc::unbounded();
 
@@ -220,7 +221,7 @@ where
         }
     }
 
-    pub(super) async fn run(&mut self, shutdown: ShutdownListener) {
+    pub(super) async fn run(&mut self) {
         let mut acknowledgement_listener = self.acknowledgement_listener.take().unwrap();
         let mut input_message_listener = self.input_message_listener.take().unwrap();
         let mut retransmission_request_listener =
@@ -231,26 +232,31 @@ where
         // the below are log messages are errors as at the current stage we do not expect any of
         // the task to ever finish. This will of course change once we introduce
         // graceful shutdowns.
+        // WIP(JON): shutdown
         let ack_listener_fut = tokio::spawn(async move {
             acknowledgement_listener.run().await;
             error!("The acknowledgement listener has finished execution!");
             acknowledgement_listener
         });
+        // WIP(JON): shutdown
         let input_listener_fut = tokio::spawn(async move {
             input_message_listener.run().await;
             error!("The input listener has finished execution!");
             input_message_listener
         });
+        // WIP(JON): shutdown
         let retransmission_req_fut = tokio::spawn(async move {
             retransmission_request_listener.run().await;
             error!("The retransmission request listener has finished execution!");
             retransmission_request_listener
         });
+        // WIP(JON): shutdown
         let sent_notification_fut = tokio::spawn(async move {
             sent_notification_listener.run().await;
             error!("The sent notification listener has finished execution!");
             sent_notification_listener
         });
+        // WIP(JON): shutdown
         let action_controller_fut = tokio::spawn(async move {
             action_controller.run().await;
             error!("The controller has finished execution!");
