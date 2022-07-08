@@ -21,11 +21,11 @@ use nymsphinx::{
     Delay as SphinxDelay,
 };
 use rand::{CryptoRng, Rng};
-use task::ShutdownListener;
 use std::{
     sync::{Arc, Weak},
     time::Duration,
 };
+use task::ShutdownListener;
 use tokio::task::JoinHandle;
 
 mod acknowledgement_listener;
@@ -168,7 +168,7 @@ where
         let action_config =
             action_controller::Config::new(config.ack_wait_addition, config.ack_wait_multiplier);
         let (action_controller, action_sender) =
-            ActionController::new(action_config, retransmission_tx);
+            ActionController::new(action_config, retransmission_tx, shutdown.clone());
 
         let message_preparer = MessagePreparer::new(
             rng,
@@ -182,6 +182,7 @@ where
             Arc::clone(&ack_key),
             connectors.ack_receiver,
             action_sender.clone(),
+            shutdown.clone(),
         );
 
         // will listen for any new messages from the client

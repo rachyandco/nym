@@ -9,6 +9,7 @@ use nymsphinx::{
     acknowledgements::{identifier::recover_identifier, AckKey},
     chunking::fragment::{FragmentIdentifier, COVER_FRAG_ID},
 };
+use task::ShutdownListener;
 use std::sync::Arc;
 
 /// Module responsible for listening for any data resembling acknowledgements from the network
@@ -17,6 +18,7 @@ pub(super) struct AcknowledgementListener {
     ack_key: Arc<AckKey>,
     ack_receiver: AcknowledgementReceiver,
     action_sender: ActionSender,
+    shutdown: ShutdownListener,
 }
 
 impl AcknowledgementListener {
@@ -24,11 +26,13 @@ impl AcknowledgementListener {
         ack_key: Arc<AckKey>,
         ack_receiver: AcknowledgementReceiver,
         action_sender: ActionSender,
+        shutdown: ShutdownListener,
     ) -> Self {
         AcknowledgementListener {
             ack_key,
             ack_receiver,
             action_sender,
+            shutdown,
         }
     }
 
