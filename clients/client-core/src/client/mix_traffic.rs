@@ -1,6 +1,8 @@
 // Copyright 2021 - Nym Technologies SA <contact@nymtech.net>
 // SPDX-License-Identifier: Apache-2.0
 
+use std::time::Duration;
+
 use futures::channel::mpsc;
 use futures::StreamExt;
 use gateway_client::GatewayClient;
@@ -77,6 +79,20 @@ impl MixTrafficController {
                 },
                 _ = self.shutdown.recv() => {
                     log::trace!("MixTrafficController: Received shutdown");
+                }
+            }
+        }
+
+        log::info!("MixTrafficController: Entering listen state");
+
+        loop {
+            tokio::select! {
+                Some(_mix_packets) = self.mix_rx.next() => {
+                    log::trace!("Ignoring mix packets");
+                },
+                _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                    log::info!("MixTrafficController: Finished waiting");
+                    break;
                 }
             }
         }
