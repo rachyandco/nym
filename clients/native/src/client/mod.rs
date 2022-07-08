@@ -252,9 +252,10 @@ impl NymClient {
         &mut self,
         mix_rx: BatchMixMessageReceiver,
         gateway_client: GatewayClient,
+        shutdown: ShutdownListener,
     ) {
         info!("Starting mix traffic controller...");
-        MixTrafficController::new(mix_rx, gateway_client).start();
+        MixTrafficController::new(mix_rx, gateway_client, shutdown).start();
     }
 
     fn start_websocket_listener(
@@ -379,7 +380,11 @@ impl NymClient {
             .start_gateway_client(mixnet_messages_sender, ack_sender)
             .await;
 
-        self.start_mix_traffic_controller(sphinx_message_receiver, gateway_client);
+        self.start_mix_traffic_controller(
+            sphinx_message_receiver,
+            gateway_client,
+            shutdown.subscribe(),
+        );
         self.start_real_traffic_controller(
             shared_topology_accessor.clone(),
             reply_key_storage,

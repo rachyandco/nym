@@ -20,6 +20,7 @@ use log::*;
 use nymsphinx::acknowledgements::AckKey;
 use nymsphinx::addressing::clients::Recipient;
 use rand::{rngs::OsRng, CryptoRng, Rng};
+use task::ShutdownListener;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::task::JoinHandle;
@@ -91,6 +92,7 @@ impl RealMessagesController<OsRng> {
         mix_sender: BatchMixMessageSender,
         topology_access: TopologyAccessor,
         reply_key_storage: ReplyKeyStorage,
+        shutdown: ShutdownListener,
     ) -> Self {
         let rng = OsRng;
 
