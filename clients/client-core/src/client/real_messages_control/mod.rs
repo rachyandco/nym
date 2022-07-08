@@ -156,9 +156,8 @@ impl RealMessagesController<OsRng> {
         // the task to ever finish. This will of course change once we introduce
         // graceful shutdowns.
         let out_queue_control_fut = tokio::spawn(async move {
-            if !out_queue_control.run_out_queue_control().await {
-                error!("The out queue controller has finished execution without being told to shutdown!");
-            }
+            out_queue_control.run_out_queue_control().await;
+            debug!("The out queue controller has finished execution!");
             out_queue_control
         });
         let ack_control_fut = tokio::spawn(async move {

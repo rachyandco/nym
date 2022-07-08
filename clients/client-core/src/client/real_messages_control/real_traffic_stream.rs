@@ -262,7 +262,7 @@ where
     }
 
     // Send messages at certain rate and if no real traffic is available, send cover message.
-    async fn run_normal_out_queue(&mut self) -> bool {
+    async fn run_normal_out_queue(&mut self) {
         // we should set initial delay only when we actually start the stream
         self.next_delay = Box::pin(time::sleep(sample_poisson_duration(
             &mut self.rng,
@@ -281,10 +281,9 @@ where
             }
         }
         log::info!("OutQueueControl: Exiting");
-        shutdown.is_shutdown()
     }
 
-    pub(crate) async fn run_out_queue_control(&mut self) -> bool {
+    pub(crate) async fn run_out_queue_control(&mut self) {
         debug!("Starting out queue controller...");
         self.run_normal_out_queue().await
     }

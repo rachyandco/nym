@@ -9,8 +9,8 @@ use nymsphinx::{
     acknowledgements::{identifier::recover_identifier, AckKey},
     chunking::fragment::{FragmentIdentifier, COVER_FRAG_ID},
 };
-use task::ShutdownListener;
 use std::sync::Arc;
+use task::ShutdownListener;
 
 /// Module responsible for listening for any data resembling acknowledgements from the network
 /// and firing actions to remove them from the 'Pending' state.
@@ -69,12 +69,19 @@ impl AcknowledgementListener {
 
     pub(super) async fn run(&mut self) {
         debug!("Started AcknowledgementListener");
-        while let Some(acks) = self.ack_receiver.next().await {
-            // realistically we would only be getting one ack at the time
-            for ack in acks {
-                self.on_ack(ack).await;
+        while !self.shutdown.is_shutdown() {
+            tokio::select! {
+                Some(acks) = self.ack_receiver.next() => {
+                    // realistically we would only be getting one ack at the time
+                    for ack in acks {
+                        self.on_ack(ack).await;
+                    }
+                },
+                _ = self.shutdown.recv() => {
+                    log::trace!("AcknowledgementListener: Received shutdown");
+                }
             }
         }
-        error!("TODO: error msg. Or maybe panic?")
+        log::info!("AcknowledgementListener: Exiting");
     }
 }
