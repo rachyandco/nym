@@ -240,7 +240,7 @@ impl NymClient {
         }
 
         info!("Starting topology refresher...");
-        topology_refresher.start_with_shutdown(shutdown);
+        topology_refresher.start(shutdown);
     }
 
     // controller for sending sphinx packets to mixnet (either real traffic or cover traffic)
@@ -290,7 +290,7 @@ impl NymClient {
         log::info!("Waiting for tasks to finish... (Press ctrl-c to force)");
         shutdown.wait_for_shutdown().await;
 
-        log::info!("Stopping nym mixnode");
+        log::info!("Stopping nym-socks5-client");
     }
 
     // Variant of `run_forever` that listends for remote control messages
@@ -301,13 +301,19 @@ impl NymClient {
                 log::debug!("Received message: {:?}", message);
                 match message {
                     Some(Socks5ControlMessage::Stop) => {
-                        log::info!("Shutting down");
-                        log::info!("Graceful shutdown of tasks not yet implemented, you might see (harmless) panics until then");
+                        log::info!("Received stop message");
                     }
                     None => log::debug!("None"),
                 }
             }
+            _ = tokio::signal::ctrl_c() => {
+                log::info!("Received SIGINT");
+            },
         }
+        log::info!(
+            "Graceful shutdown of tasks not yet fully implemented, you might see (harmless) panics until then"
+        );
+        log::info!("Stopping nym-socks5-client");
     }
 
     pub async fn start(&mut self) -> ShutdownNotifier {

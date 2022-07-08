@@ -32,6 +32,7 @@ use nymsphinx::addressing::clients::Recipient;
 use nymsphinx::addressing::nodes::NodeIdentity;
 use nymsphinx::anonymous_replies::ReplySurb;
 use nymsphinx::receiver::ReconstructedMessage;
+use task::{wait_for_signal, ShutdownListener, ShutdownNotifier};
 
 use crate::client::config::{Config, SocketType};
 use crate::websocket;
@@ -140,6 +141,7 @@ impl NymClient {
         query_receiver: ReceivedBufferRequestReceiver,
         mixnet_receiver: MixnetMessageReceiver,
         reply_key_storage: ReplyKeyStorage,
+        shutdown: ShutdownListener,
     ) {
         info!("Starting received messages buffer controller...");
         ReceivedMessagesBufferController::new(
@@ -147,6 +149,7 @@ impl NymClient {
             query_receiver,
             mixnet_receiver,
             reply_key_storage,
+            shutdown,
         )
         .start()
     }
@@ -212,7 +215,11 @@ impl NymClient {
 
     // future responsible for periodically polling directory server and updating
     // the current global view of topology
-    async fn start_topology_refresher(&mut self, topology_accessor: TopologyAccessor) {
+    async fn start_topology_refresher(
+        &mut self,
+        topology_accessor: TopologyAccessor,
+        shutdown: ShutdownListener,
+    ) {
         let topology_refresher_config = TopologyRefresherConfig::new(
             self.config.get_base().get_validator_api_endpoints(),
             self.config.get_base().get_topology_refresh_rate(),
@@ -234,7 +241,7 @@ impl NymClient {
         }
 
         info!("Starting topology refresher...");
-        topology_refresher.start();
+        topology_refresher.start(shutdown);
     }
 
     // controller for sending sphinx packets to mixnet (either real traffic or cover traffic)
@@ -308,20 +315,23 @@ impl NymClient {
 
     /// blocking version of `start` method. Will run forever (or until SIGINT is sent)
     pub async fn run_forever(&mut self) {
-        self.start().await;
-        if let Err(e) = tokio::signal::ctrl_c().await {
-            error!(
-                "There was an error while capturing SIGINT - {:?}. We will terminate regardless",
-                e
-            );
-        }
+        let mut shutdown = self.start().await;
+        wait_for_signal().await;
 
         println!(
-            "Received SIGINT - the client will terminate now (threads are not yet nicely stopped, if you see stack traces that's alright)."
+            "Received signal - the client will terminate now (threads are not yet nicely stopped, if you see stack traces that's alright)."
         );
+
+        log::info!("Sending shutdown");
+        shutdown.signal_shutdown().ok();
+
+        log::info!("Waiting for tasks to finish... (Press ctrl-c to force)");
+        shutdown.wait_for_shutdown().await;
+
+        log::info!("Stopping nym-client");
     }
 
-    pub async fn start(&mut self) {
+    pub async fn start(&mut self) -> ShutdownNotifier {
         info!("Starting nym client");
         // channels for inter-component communication
         // TODO: make the channels be internally created by the relevant components
@@ -351,14 +361,18 @@ impl NymClient {
             ReplyKeyStorage::load(self.config.get_base().get_reply_encryption_key_store_path())
                 .expect("Failed to load reply key storage!");
 
+        // Shutdown notifier for signalling tasks to stop
+        let shutdown = ShutdownNotifier::default();
+
         // the components are started in very specific order. Unless you know what you are doing,
         // do not change that.
-        self.start_topology_refresher(shared_topology_accessor.clone())
+        self.start_topology_refresher(shared_topology_accessor.clone(), shutdown.subscribe())
             .await;
         self.start_received_messages_buffer_controller(
             received_buffer_request_receiver,
             mixnet_messages_receiver,
             reply_key_storage.clone(),
+            shutdown.subscribe(),
         );
 
         let gateway_client = self
@@ -399,5 +413,7 @@ impl NymClient {
 
         info!("Client startup finished!");
         info!("The address of this client is: {}", self.as_mix_recipient());
+
+        shutdown
     }
 }

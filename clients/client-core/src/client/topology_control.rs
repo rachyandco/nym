@@ -304,16 +304,7 @@ impl TopologyRefresher {
         self.topology_accessor.is_routable().await
     }
 
-    pub fn start(mut self) -> JoinHandle<()> {
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(self.refresh_rate).await;
-                self.refresh().await;
-            }
-        })
-    }
-
-    pub fn start_with_shutdown(mut self, mut shutdown: ShutdownListener) -> JoinHandle<()> {
+    pub fn start(mut self, mut shutdown: ShutdownListener) -> JoinHandle<()> {
         tokio::spawn(async move {
             while !shutdown.is_shutdown() {
                 tokio::select! {

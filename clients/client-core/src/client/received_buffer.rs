@@ -278,31 +278,42 @@ pub enum ReceivedBufferMessage {
 struct RequestReceiver {
     received_buffer: ReceivedMessagesBuffer,
     query_receiver: ReceivedBufferRequestReceiver,
+    shutdown: ShutdownListener,
 }
 
 impl RequestReceiver {
     fn new(
         received_buffer: ReceivedMessagesBuffer,
         query_receiver: ReceivedBufferRequestReceiver,
+        shutdown: ShutdownListener,
     ) -> Self {
         RequestReceiver {
             received_buffer,
             query_receiver,
+            shutdown,
         }
     }
 
     fn start(mut self) -> JoinHandle<()> {
         tokio::spawn(async move {
-            while let Some(request) = self.query_receiver.next().await {
-                match request {
-                    ReceivedBufferMessage::ReceiverAnnounce(sender) => {
-                        self.received_buffer.connect_sender(sender).await;
+            while !self.shutdown.is_shutdown() {
+                tokio::select! {
+                    Some(request) = self.query_receiver.next() => {
+                        match request {
+                            ReceivedBufferMessage::ReceiverAnnounce(sender) => {
+                                self.received_buffer.connect_sender(sender).await;
+                            }
+                            ReceivedBufferMessage::ReceiverDisconnect => {
+                                self.received_buffer.disconnect_sender().await
+                            }
+                        }
+                    },
+                    _ = self.shutdown.recv() => {
+                        log::trace!("RequestReceiver: Received shutdown");
                     }
-                    ReceivedBufferMessage::ReceiverDisconnect => {
-                        self.received_buffer.disconnect_sender().await
-                    }
-                }
+                };
             }
+            log::info!("RequestReceiver: Exiting");
         })
     }
 }
@@ -327,10 +338,17 @@ impl FragmentedMessageReceiver {
     }
     fn start(mut self) -> JoinHandle<()> {
         tokio::spawn(async move {
-            // WIP(JON)
-            while let Some(new_messages) = self.mixnet_packet_receiver.next().await {
-                self.received_buffer.handle_new_received(new_messages).await;
+            while !self.shutdown.is_shutdown() {
+                tokio::select! {
+                    Some(new_messages) = self.mixnet_packet_receiver.next() => {
+                        self.received_buffer.handle_new_received(new_messages).await;
+                    },
+                    _ = self.shutdown.recv() => {
+                        log::trace!("FragmentedMessageReceiver: Received shutdown");
+                    }
+                }
             }
+            log::info!("FragmentedMessageReceiver: Exiting");
         })
     }
 }

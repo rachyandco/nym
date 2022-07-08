@@ -3080,6 +3080,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sled",
+ "task",
  "tokio",
  "tokio-tungstenite",
  "topology",
