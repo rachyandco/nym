@@ -162,7 +162,7 @@ impl RealMessagesController<OsRng> {
         });
         let ack_control_fut = tokio::spawn(async move {
             ack_control.run().await;
-            error!("The acknowledgement controller has finished execution!");
+            debug!("The acknowledgement controller has finished execution!");
             ack_control
         });
 

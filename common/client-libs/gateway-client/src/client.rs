@@ -27,6 +27,7 @@ use log::*;
 use network_defaults::{REMAINING_BANDWIDTH_THRESHOLD, TOKENS_TO_BURN};
 use nymsphinx::forwarding::packet::MixPacket;
 use rand::rngs::OsRng;
+use task::ShutdownListener;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
@@ -65,6 +66,8 @@ pub struct GatewayClient {
     reconnection_attempts: usize,
     /// Delay between each subsequent reconnection attempt.
     reconnection_backoff: Duration,
+
+    //shutdown: ShutdownListener,
 }
 
 impl GatewayClient {
@@ -80,6 +83,7 @@ impl GatewayClient {
         ack_sender: AcknowledgementSender,
         response_timeout_duration: Duration,
         bandwidth_controller: Option<BandwidthController<PersistentStorage>>,
+        //shutdown: ShutdownListener,
     ) -> Self {
         GatewayClient {
             authenticated: false,
@@ -97,6 +101,7 @@ impl GatewayClient {
             should_reconnect_on_failure: true,
             reconnection_attempts: DEFAULT_RECONNECTION_ATTEMPTS,
             reconnection_backoff: DEFAULT_RECONNECTION_BACKOFF,
+            //shutdown,
         }
     }
 
@@ -123,6 +128,7 @@ impl GatewayClient {
         gateway_owner: String,
         local_identity: Arc<identity::KeyPair>,
         response_timeout_duration: Duration,
+        //shutdown: ShutdownListener,
     ) -> Self {
         use futures::channel::mpsc;
 
@@ -148,6 +154,7 @@ impl GatewayClient {
             should_reconnect_on_failure: false,
             reconnection_attempts: DEFAULT_RECONNECTION_ATTEMPTS,
             reconnection_backoff: DEFAULT_RECONNECTION_BACKOFF,
+            //shutdown,
         }
     }
 
@@ -298,7 +305,7 @@ impl GatewayClient {
                         }
                         _ => (),
                     }
-               }
+                }
             }
         }
     }

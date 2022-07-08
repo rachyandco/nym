@@ -15,6 +15,7 @@ use nymsphinx::params::{ReplySurbEncryptionAlgorithm, ReplySurbKeyDigestAlgorith
 use nymsphinx::receiver::{MessageReceiver, MessageRecoveryError, ReconstructedMessage};
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Duration;
 use task::ShutdownListener;
 use tokio::task::JoinHandle;
 
@@ -310,6 +311,28 @@ impl RequestReceiver {
                     },
                     _ = self.shutdown.recv() => {
                         log::trace!("RequestReceiver: Received shutdown");
+                    }
+                };
+            }
+
+            log::info!("RequestReceiver: Entering listen state");
+
+            // Only listen for receiver disconnects
+            loop {
+                tokio::select! {
+                    Some(request) = self.query_receiver.next() => {
+                        match request {
+                            ReceivedBufferMessage::ReceiverAnnounce(_) => {
+                                log::trace!("Ignoring receiver announce");
+                            }
+                            ReceivedBufferMessage::ReceiverDisconnect => {
+                                self.received_buffer.disconnect_sender().await
+                            }
+                        }
+                    },
+                    _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                        log::trace!("RequestReceiver: Finished waiting");
+                        break;
                     }
                 };
             }
