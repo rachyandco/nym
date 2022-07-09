@@ -39,6 +39,10 @@ default-features = false
 version = "1.19.1"
 features = ["macros", "rt", "net", "sync", "time"]
 
+[target."cfg(not(target_arch = \"wasm32\"))".dependencies.tokio-stream]
+version = "0.1.9"
+features = ["net", "sync", "time"]
+
 [target."cfg(not(target_arch = \"wasm32\"))".dependencies.tokio-tungstenite]
 version = "0.14"
 

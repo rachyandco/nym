@@ -8,7 +8,6 @@ use futures::channel::mpsc;
 use log::*;
 use nymsphinx::addressing::nodes::MAX_NODE_ADDRESS_UNPADDED_LEN;
 use nymsphinx::params::packet_sizes::PacketSize;
-use task::ShutdownListener;
 
 pub type MixnetMessageSender = mpsc::UnboundedSender<Vec<Vec<u8>>>;
 pub type MixnetMessageReceiver = mpsc::UnboundedReceiver<Vec<Vec<u8>>>;
@@ -36,7 +35,6 @@ impl PacketRouter {
     pub fn route_received(
         &self,
         unwrapped_packets: Vec<Vec<u8>>,
-        shutdown: Option<ShutdownListener>,
     ) {
         let mut received_messages = Vec::new();
         let mut received_acks = Vec::new();
@@ -64,13 +62,6 @@ impl PacketRouter {
                 received_messages.push(received_packet);
             }
         }
-
-        //if let Some(mut shutdown) = shutdown {
-        //    if shutdown.is_shutdown_poll() {
-        //        log::info!("PacketRouter: shutdown detected, aborting before sending");
-        //        return;
-        //    }
-        //}
 
         // due to how we are currently using it, those unwraps can't fail, but if we ever
         // wanted to make `gateway-client` into some more generic library, we would probably need

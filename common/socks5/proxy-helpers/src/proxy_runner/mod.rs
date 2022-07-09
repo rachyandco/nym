@@ -32,6 +32,7 @@ pub type MixProxySender<S> = mpsc::UnboundedSender<S>;
 
 // TODO: when we finally get to implementing graceful shutdown,
 // on Drop this guy should tell the remote that it's closed now
+// WIP(JON): do this!
 #[derive(Debug)]
 pub struct ProxyRunner<S> {
     /// receives data from the mix network and sends that into the socket

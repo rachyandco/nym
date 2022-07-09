@@ -84,11 +84,10 @@ impl AcknowledgementListener {
         }
 
         log::info!("AcknowledgementListener: Entering listen state");
-
         loop {
             tokio::select! {
-                Some(acks) = self.ack_receiver.next() => {
-                    log::trace!("Ignoring acks received");
+                Some(_acks) = self.ack_receiver.next() => {
+                    log::trace!("Received ack while in listening state: dropping");
                 },
                 _ = tokio::time::sleep(Duration::from_secs(1)) => {
                     log::info!("MixTrafficController: Finished waiting");

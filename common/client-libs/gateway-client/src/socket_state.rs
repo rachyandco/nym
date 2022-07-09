@@ -47,7 +47,6 @@ impl PartiallyDelegated {
         ws_msg: Message,
         packet_router: &PacketRouter,
         shared_key: &SharedKeys,
-        shutdown: Option<ShutdownListener>,
     ) {
         match ws_msg {
             Message::Binary(bin_msg) => {
@@ -68,7 +67,7 @@ impl PartiallyDelegated {
 
                 // TODO: some batching mechanism to allow reading and sending more than
                 // one packet at the time, because the receiver can easily handle it
-                packet_router.route_received(vec![plaintext], shutdown)
+                packet_router.route_received(vec![plaintext])
             }
             // I think that in the future we should perhaps have some sequence number system, i.e.
             // so each request/response pair can be easily identified, so that if messages are
@@ -97,15 +96,16 @@ impl PartiallyDelegated {
 
         let (sink, mut stream) = conn.split();
 
-        // WIP(JON)
-        let mut shutdown_local = shutdown.clone().unwrap();
-
         let mixnet_receiver_future = async move {
             let mut fused_receiver = notify_receiver.fuse();
             let mut fused_stream = (&mut stream).fuse();
 
+            let shutdown_is_some = shutdown.is_some();
+            let shutdown_recv_lazy = async { shutdown.unwrap().recv().await };
+            tokio::pin!(shutdown_recv_lazy);
+
+            // WIP(JON)
             let ret_err = loop {
-                //futures::select! {
                 tokio::select! {
                     _ = &mut fused_receiver => {
                         break Ok(());
@@ -115,21 +115,15 @@ impl PartiallyDelegated {
                             Err(err) => break Err(err),
                             Ok(msg) => msg
                         };
-                        Self::route_socket_message(ws_msg, &packet_router, shared_key.as_ref(), shutdown.clone());
+                        Self::route_socket_message(ws_msg, &packet_router, shared_key.as_ref());
                     }
-                    _ = shutdown_local.recv() => {
-                        log::trace!("GatewayClient: (split_and_listen) Received shutdown");
+                    _ = &mut shutdown_recv_lazy, if shutdown_is_some => {
+                        log::trace!("GatewayClient listener: Received shutdown");
+                        log::info!("GatewayClient listener: Exiting");
                         return;
                     }
                 };
             };
-
-            //if let Some(mut shutdown) = shutdown {
-            //    if shutdown.is_shutdown_poll() {
-            //        log::info!("GatewayClient (split_and_listen): Just stop");
-            //        return;
-            //    }
-            //}
 
             if match ret_err {
                 Err(err) => stream_sender.send(Err(err)),

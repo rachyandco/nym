@@ -291,8 +291,12 @@ impl ServiceProvider {
         let (mix_input_sender, mix_input_receiver) =
             mpsc::unbounded::<(Socks5Message, Recipient)>();
 
-        // controller for managing all active connections
-        let (mut active_connections_controller, mut controller_sender) = Controller::new();
+        // Controller for managing all active connections.
+        // We provide it with a ShutdownListener since it requires it, even though for the network
+        // requester shutdown signalling is not yet fully implemented.
+        let shutdown = task::ShutdownNotifier::default();
+        let (mut active_connections_controller, mut controller_sender) =
+            Controller::new(shutdown.subscribe());
         tokio::spawn(async move {
             active_connections_controller.run().await;
         });

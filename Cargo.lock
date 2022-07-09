@@ -1959,6 +1959,7 @@ dependencies = [
  "task",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tokio-tungstenite",
  "tungstenite",
  "url",
@@ -3202,6 +3203,7 @@ dependencies = [
  "socks5-requests",
  "sqlx",
  "statistics-common",
+ "task",
  "thiserror",
  "tokio",
  "tokio-tungstenite",
@@ -3329,6 +3331,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "task",
  "thiserror",
  "time 0.3.9",
  "tokio",
@@ -5805,6 +5808,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util 0.7.3",
 ]
 
 [[package]]

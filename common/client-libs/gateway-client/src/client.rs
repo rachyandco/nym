@@ -67,6 +67,8 @@ pub struct GatewayClient {
     /// Delay between each subsequent reconnection attempt.
     reconnection_backoff: Duration,
 
+    /// Listen to shutdown messages. This is an option since we don't require it when for example
+    /// when doing initial authentication.
     shutdown: Option<ShutdownListener>,
 }
 
@@ -285,7 +287,6 @@ impl GatewayClient {
         let mut fused_timeout = timeout.fuse();
         let mut fused_stream = conn.fuse();
 
-        // WIP(JON): should this one be stopped (enter silent mode)
         loop {
             futures::select! {
                 _ = &mut fused_timeout => {
@@ -298,7 +299,7 @@ impl GatewayClient {
                     };
                     match ws_msg {
                         Message::Binary(bin_msg) => {
-                            self.packet_router.route_received(vec![bin_msg], self.shutdown.clone());
+                            self.packet_router.route_received(vec![bin_msg]);
                         }
                         Message::Text(txt_msg) => {
                             break ServerResponse::try_from(txt_msg).map_err(|_| GatewayClientError::MalformedResponse);
@@ -306,9 +307,6 @@ impl GatewayClient {
                         _ => (),
                     }
                 }
-                //_ = shutdown.recv() => {
-                    //log::trace!("GatewayClient: (read_control_response) Received shutdown");
-                //}
             }
         }
     }

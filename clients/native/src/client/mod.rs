@@ -162,6 +162,7 @@ impl NymClient {
         &mut self,
         mixnet_message_sender: MixnetMessageSender,
         ack_sender: AcknowledgementSender,
+        shutdown: ShutdownListener,
     ) -> GatewayClient {
         let gateway_id = self.config.get_base().get_gateway_id();
         if gateway_id.is_empty() {
@@ -204,6 +205,7 @@ impl NymClient {
             ack_sender,
             self.config.get_base().get_gateway_response_timeout(),
             Some(bandwidth_controller),
+            Some(shutdown),
         );
 
         if self.config.get_base().get_disabled_credentials_mode() {
@@ -381,7 +383,7 @@ impl NymClient {
         );
 
         let gateway_client = self
-            .start_gateway_client(mixnet_messages_sender, ack_sender)
+            .start_gateway_client(mixnet_messages_sender, ack_sender, shutdown.subscribe())
             .await;
 
         self.start_mix_traffic_controller(

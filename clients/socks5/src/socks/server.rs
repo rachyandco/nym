@@ -73,7 +73,7 @@ impl SphinxSocksServer {
         });
 
         // WIP(JON)
-        while !self.shutdown.is_shutdown() {
+        loop {
             tokio::select! {
                 Ok((stream, _remote)) = listener.accept() => {
                     // TODO Optimize this
@@ -120,11 +120,10 @@ impl SphinxSocksServer {
                 },
                 _ = self.shutdown.recv() => {
                     log::trace!("SphinxSocksServer: Received shutdown");
+                    log::info!("SphinxSocksServer: Halt");
+                    return Ok(());
                 }
             }
         }
-
-        log::info!("SphinxSocksServer: Halt");
-        Ok(())
     }
 }
