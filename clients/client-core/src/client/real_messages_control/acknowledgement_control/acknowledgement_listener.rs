@@ -9,7 +9,7 @@ use nymsphinx::{
     acknowledgements::{identifier::recover_identifier, AckKey},
     chunking::fragment::{FragmentIdentifier, COVER_FRAG_ID},
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use task::ShutdownListener;
 
 /// Module responsible for listening for any data resembling acknowledgements from the network
@@ -79,6 +79,20 @@ impl AcknowledgementListener {
                 },
                 _ = self.shutdown.recv() => {
                     log::trace!("AcknowledgementListener: Received shutdown");
+                }
+            }
+        }
+
+        log::info!("AcknowledgementListener: Entering listen state");
+
+        loop {
+            tokio::select! {
+                Some(acks) = self.ack_receiver.next() => {
+                    log::trace!("Ignoring acks received");
+                },
+                _ = tokio::time::sleep(Duration::from_secs(1)) => {
+                    log::info!("MixTrafficController: Finished waiting");
+                    break;
                 }
             }
         }

@@ -27,10 +27,10 @@ use log::*;
 use network_defaults::{REMAINING_BANDWIDTH_THRESHOLD, TOKENS_TO_BURN};
 use nymsphinx::forwarding::packet::MixPacket;
 use rand::rngs::OsRng;
-use task::ShutdownListener;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
+use task::ShutdownListener;
 use tungstenite::protocol::Message;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -67,7 +67,7 @@ pub struct GatewayClient {
     /// Delay between each subsequent reconnection attempt.
     reconnection_backoff: Duration,
 
-    //shutdown: ShutdownListener,
+    shutdown: Option<ShutdownListener>,
 }
 
 impl GatewayClient {
@@ -83,7 +83,7 @@ impl GatewayClient {
         ack_sender: AcknowledgementSender,
         response_timeout_duration: Duration,
         bandwidth_controller: Option<BandwidthController<PersistentStorage>>,
-        //shutdown: ShutdownListener,
+        shutdown: Option<ShutdownListener>,
     ) -> Self {
         GatewayClient {
             authenticated: false,
@@ -101,7 +101,7 @@ impl GatewayClient {
             should_reconnect_on_failure: true,
             reconnection_attempts: DEFAULT_RECONNECTION_ATTEMPTS,
             reconnection_backoff: DEFAULT_RECONNECTION_BACKOFF,
-            //shutdown,
+            shutdown,
         }
     }
 
@@ -128,7 +128,6 @@ impl GatewayClient {
         gateway_owner: String,
         local_identity: Arc<identity::KeyPair>,
         response_timeout_duration: Duration,
-        //shutdown: ShutdownListener,
     ) -> Self {
         use futures::channel::mpsc;
 
@@ -154,7 +153,7 @@ impl GatewayClient {
             should_reconnect_on_failure: false,
             reconnection_attempts: DEFAULT_RECONNECTION_ATTEMPTS,
             reconnection_backoff: DEFAULT_RECONNECTION_BACKOFF,
-            //shutdown,
+            shutdown: None,
         }
     }
 
@@ -286,6 +285,7 @@ impl GatewayClient {
         let mut fused_timeout = timeout.fuse();
         let mut fused_stream = conn.fuse();
 
+        // WIP(JON): should this one be stopped (enter silent mode)
         loop {
             futures::select! {
                 _ = &mut fused_timeout => {
@@ -298,7 +298,7 @@ impl GatewayClient {
                     };
                     match ws_msg {
                         Message::Binary(bin_msg) => {
-                            self.packet_router.route_received(vec![bin_msg]);
+                            self.packet_router.route_received(vec![bin_msg], self.shutdown.clone());
                         }
                         Message::Text(txt_msg) => {
                             break ServerResponse::try_from(txt_msg).map_err(|_| GatewayClientError::MalformedResponse);
@@ -306,6 +306,9 @@ impl GatewayClient {
                         _ => (),
                     }
                 }
+                //_ = shutdown.recv() => {
+                    //log::trace!("GatewayClient: (read_control_response) Received shutdown");
+                //}
             }
         }
     }
@@ -598,6 +601,12 @@ impl GatewayClient {
         &mut self,
         packets: Vec<MixPacket>,
     ) -> Result<(), GatewayClientError> {
+        //if let Some(ref mut shutdown) = self.shutdown {
+        //    if shutdown.is_shutdown_poll() {
+        //        log::error!("GatewayClient: Just stop");
+        //        return Ok(());
+        //    }
+        //}
         if !self.authenticated {
             return Err(GatewayClientError::NotAuthenticated);
         }
@@ -709,6 +718,12 @@ impl GatewayClient {
 
     // Note: this requires prior authentication
     pub fn start_listening_for_mixnet_messages(&mut self) -> Result<(), GatewayClientError> {
+        //if let Some(ref mut shutdown) = self.shutdown {
+        //    if shutdown.is_shutdown_poll() {
+        //        log::error!("GatewayClient: (start_listening) Just stop");
+        //        return Ok(());
+        //    }
+        //}
         if !self.authenticated {
             return Err(GatewayClientError::NotAuthenticated);
         }
@@ -730,6 +745,7 @@ impl GatewayClient {
                                 .as_ref()
                                 .expect("no shared key present even though we're authenticated!"),
                         ),
+                        self.shutdown.clone(),
                     )
                 }
                 _ => unreachable!(),

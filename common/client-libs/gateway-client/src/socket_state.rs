@@ -11,6 +11,7 @@ use gateway_requests::registration::handshake::SharedKeys;
 use gateway_requests::BinaryResponse;
 use log::*;
 use std::sync::Arc;
+use task::ShutdownListener;
 use tungstenite::Message;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -46,6 +47,7 @@ impl PartiallyDelegated {
         ws_msg: Message,
         packet_router: &PacketRouter,
         shared_key: &SharedKeys,
+        shutdown: Option<ShutdownListener>,
     ) {
         match ws_msg {
             Message::Binary(bin_msg) => {
@@ -66,7 +68,7 @@ impl PartiallyDelegated {
 
                 // TODO: some batching mechanism to allow reading and sending more than
                 // one packet at the time, because the receiver can easily handle it
-                packet_router.route_received(vec![plaintext])
+                packet_router.route_received(vec![plaintext], shutdown)
             }
             // I think that in the future we should perhaps have some sequence number system, i.e.
             // so each request/response pair can be easily identified, so that if messages are
@@ -86,6 +88,7 @@ impl PartiallyDelegated {
         conn: WsConn,
         packet_router: PacketRouter,
         shared_key: Arc<SharedKeys>,
+        shutdown: Option<ShutdownListener>,
     ) -> Self {
         // when called for, it NEEDS TO yield back the stream so that we could merge it and
         // read control request responses.
@@ -94,13 +97,17 @@ impl PartiallyDelegated {
 
         let (sink, mut stream) = conn.split();
 
+        // WIP(JON)
+        let mut shutdown_local = shutdown.clone().unwrap();
+
         let mixnet_receiver_future = async move {
             let mut fused_receiver = notify_receiver.fuse();
             let mut fused_stream = (&mut stream).fuse();
 
             let ret_err = loop {
-                futures::select! {
-                    _ = fused_receiver => {
+                //futures::select! {
+                tokio::select! {
+                    _ = &mut fused_receiver => {
                         break Ok(());
                     }
                     msg = fused_stream.next() => {
@@ -108,10 +115,21 @@ impl PartiallyDelegated {
                             Err(err) => break Err(err),
                             Ok(msg) => msg
                         };
-                        Self::route_socket_message(ws_msg, &packet_router, shared_key.as_ref());
+                        Self::route_socket_message(ws_msg, &packet_router, shared_key.as_ref(), shutdown.clone());
+                    }
+                    _ = shutdown_local.recv() => {
+                        log::trace!("GatewayClient: (split_and_listen) Received shutdown");
+                        return;
                     }
                 };
             };
+
+            //if let Some(mut shutdown) = shutdown {
+            //    if shutdown.is_shutdown_poll() {
+            //        log::info!("GatewayClient (split_and_listen): Just stop");
+            //        return;
+            //    }
+            //}
 
             if match ret_err {
                 Err(err) => stream_sender.send(Err(err)),
