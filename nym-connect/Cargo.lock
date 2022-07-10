@@ -629,6 +629,7 @@ dependencies = [
  "rand 0.7.3",
  "serde",
  "sled",
+ "task",
  "tokio",
  "topology",
  "url",
@@ -1921,8 +1922,10 @@ dependencies = [
  "pemstore",
  "rand 0.7.3",
  "secp256k1",
+ "task",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tokio-tungstenite",
  "tungstenite",
  "url",
@@ -4270,6 +4273,7 @@ dependencies = [
  "log",
  "ordered-buffer",
  "socks5-requests",
+ "task",
  "tokio",
  "tokio-util 0.7.3",
 ]
@@ -6082,6 +6086,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util 0.7.3",
 ]
 
 [[package]]

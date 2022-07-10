@@ -304,7 +304,7 @@ impl NymClient {
 
     // Variant of `run_forever` that listends for remote control messages
     pub async fn run_and_listen(&mut self, mut receiver: Socks5ControlMessageReceiver) {
-        self.start().await;
+        let mut shutdown = self.start().await;
         tokio::select! {
             message = receiver.next() => {
                 log::debug!("Received message: {:?}", message);
@@ -319,9 +319,13 @@ impl NymClient {
                 log::info!("Received SIGINT");
             },
         }
-        log::info!(
-            "Graceful shutdown of tasks not yet fully implemented, you might see (harmless) panics until then"
-        );
+
+        log::info!("Sending shutdown");
+        shutdown.signal_shutdown().ok();
+
+        log::info!("Waiting for tasks to finish... (Press ctrl-c to force)");
+        shutdown.wait_for_shutdown().await;
+
         log::info!("Stopping nym-socks5-client");
     }
 
