@@ -384,7 +384,6 @@ impl FragmentedMessageReceiver {
                 }
             }
 
-
             log::info!("FragmentedMessageReceiver: Exiting");
         })
     }

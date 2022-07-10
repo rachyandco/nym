@@ -6,8 +6,8 @@ use futures::StreamExt;
 use log::*;
 use ordered_buffer::{OrderedMessage, OrderedMessageBuffer};
 use socks5_requests::ConnectionId;
-use task::ShutdownListener;
 use std::collections::{HashMap, HashSet};
+use task::ShutdownListener;
 
 /// A generic message produced after reading from a socket/connection. It includes data that was
 /// actually read alongside boolean indicating whether the connection got closed so that

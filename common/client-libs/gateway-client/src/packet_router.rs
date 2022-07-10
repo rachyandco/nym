@@ -32,10 +32,7 @@ impl PacketRouter {
         }
     }
 
-    pub fn route_received(
-        &self,
-        unwrapped_packets: Vec<Vec<u8>>,
-    ) {
+    pub fn route_received(&self, unwrapped_packets: Vec<Vec<u8>>) {
         let mut received_messages = Vec::new();
         let mut received_acks = Vec::new();
 

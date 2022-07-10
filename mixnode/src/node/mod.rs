@@ -26,7 +26,7 @@ use rand::thread_rng;
 use std::net::SocketAddr;
 use std::process;
 use std::sync::Arc;
-use task::{ShutdownListener, ShutdownNotifier, wait_for_signal};
+use task::{wait_for_signal, ShutdownListener, ShutdownNotifier};
 use version_checker::parse_version;
 
 mod http;
