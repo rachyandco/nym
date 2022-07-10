@@ -120,7 +120,7 @@ impl SphinxSocksServer {
                 },
                 _ = self.shutdown.recv() => {
                     log::trace!("SphinxSocksServer: Received shutdown");
-                    log::info!("SphinxSocksServer: Halt");
+                    log::info!("SphinxSocksServer: Exiting");
                     return Ok(());
                 }
             }
