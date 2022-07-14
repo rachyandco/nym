@@ -1,5 +1,5 @@
 use cosmwasm_std::{Coin, Timestamp, Uint128};
-use mixnet_contract_common::{Gateway, IdentityKey, MixNode};
+use mixnet_contract_common::{Gateway, IdentityKey, MixNode, NodeId};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -56,10 +56,12 @@ pub enum ExecuteMsg {
     },
     ClaimOperatorReward {},
     ClaimDelegatorReward {
-        mix_identity: String,
+        // mix_identity: IdentityKey,
+        mix_id: NodeId,
     },
     CompoundDelegatorReward {
-        mix_identity: String,
+        // mix_identity: IdentityKey,
+        mix_id: NodeId,
     },
     CompoundOperatorReward {},
     UpdateMixnodeConfig {
@@ -69,11 +71,15 @@ pub enum ExecuteMsg {
         address: String,
     },
     DelegateToMixnode {
-        mix_identity: IdentityKey,
+        // TODO: mix_identity has been replaced by the mix_id instead
+        // mix_identity: IdentityKey,
+        mix_id: NodeId,
         amount: Coin,
     },
     UndelegateFromMixnode {
-        mix_identity: IdentityKey,
+        // TODO: mix_identity has been replaced by the mix_id instead
+        // mix_identity: IdentityKey,
+        mix_id: NodeId,
     },
     CreateAccount {
         owner_address: String,
@@ -85,7 +91,9 @@ pub enum ExecuteMsg {
     },
     TrackUndelegation {
         owner: String,
-        mix_identity: IdentityKey,
+        // TODO: mix_identity has been replaced by the mix_id instead
+        // mix_identity: IdentityKey,
+        mix_id: NodeId,
         amount: Coin,
     },
     BondMixnode {
