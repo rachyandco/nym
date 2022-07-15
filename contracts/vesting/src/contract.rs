@@ -42,6 +42,7 @@ pub fn instantiate(
 #[entry_point]
 pub fn migrate(_deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     todo!("we'd probably need to explicitly undelegate/unbond everyone here to move to the new system");
+    todo!("since we removed all 1ucoin sends on the mixnet contract side, we'd probably want to do the same thing here");
 
     Ok(Response::default())
 }
