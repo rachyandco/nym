@@ -1,14 +1,13 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { AppContext } from 'src/context/main';
-import { Box } from '@mui/material';
-import { useBondingContext, BondingContextProvider } from '../../context';
+import { BondingContextProvider, useBondingContext } from '../../context';
 import { PageLayout } from '../../layouts';
 import BondingCard from './bonding';
-import MixnodeCard from './mixnode';
 import GatewayCard from './gateway';
+import MixnodeCard from './mixnode';
 
 const Bonding = () => {
-  const { bondedMixnode, bondedGateway, loading } = useBondingContext();
+  const { bondedMixnode, bondedGateway } = useBondingContext();
 
   // TODO display a special UI on loading state
   return (
