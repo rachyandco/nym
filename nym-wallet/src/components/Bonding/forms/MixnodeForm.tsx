@@ -27,8 +27,8 @@ const NodeData = ({ mixnodeData, onNext }: { mixnodeData: MixnodeData; onNext: (
   };
 
   useEffect(() => {
-    window.addEventListener('validate_step' as any, captureEvent);
-    return () => window.removeEventListener('validate_step' as any, captureEvent);
+    window.addEventListener('validate_mixnode_step' as any, captureEvent);
+    return () => window.removeEventListener('validate_mixnode_step' as any, captureEvent);
   }, []);
 
   return (
@@ -52,8 +52,8 @@ const NodeData = ({ mixnodeData, onNext }: { mixnodeData: MixnodeData; onNext: (
         {...register('ownerSignature')}
         name="ownerSignature"
         label="Owner signature"
-        error={Boolean(errors.host)}
-        helperText={errors.host?.message}
+        error={Boolean(errors.ownerSignature)}
+        helperText={errors.ownerSignature?.message}
       />
       <Stack direction="row" gap={2}>
         <TextField
